@@ -616,13 +616,16 @@ static void doREPL (lua_State *L) {
   progname = NULL;  /* no 'progname' on errors in interactive mode */
   lua_initreadline(L);
   while ((status = loadline(L)) != -1) {
-    if(doRun == 0)
+    if(doRun == 0){
       emscripten_sleep(1);
+      continue;
+    }
 
     if (status == LUA_OK)
       status = docall(L, 0, LUA_MULTRET);
     if (status == LUA_OK) l_print(L);
-    else report(L, status);    
+    else report(L, status);
+    doRun = 0;
   }
   lua_settop(L, 0);  /* clear stack */
   lua_writeline();

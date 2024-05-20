@@ -61,7 +61,8 @@ $(LUA_A): $(BASE_O)
 	$(RANLIB) $@
 
 $(LUA_T): $(LUA_O) $(LUA_A)
-	$(CC) -o $@ $(LDFLAGS) $(LUA_O) $(LUA_A) $(LIBS) -s EXPORTED_FUNCTIONS='["_get_doRun", "_set_doRun"]' -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' -s ASYNCIFY
+	$(CC) -o $@ $(LDFLAGS) $(LUA_O) $(LUA_A) $(LIBS) -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "callMain", "FS_stdin_getChar"]' -s ASYNCIFY -s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s ASSERTIONS -s STACK_OVERFLOW_CHECK -s MODULARIZE=1 -s EXPORT_NAME="LuaJS" -sWASMFS
+	# -s EXPORTED_FUNCTIONS='["_main", "_get_doRun", "_set_doRun"]'
 
 $(LUAC_T): $(LUAC_O) $(LUA_A)
 	$(CC) -o $@ $(LDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
