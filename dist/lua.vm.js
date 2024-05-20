@@ -1,6 +1,11 @@
 var lua = null;
 var luaInput = ''
 
-LuaJS.call().then((l) => {
-    lua = l    
-})
+function runLua(code) {
+    luaInput = code;
+
+    LuaJS.call().then((l) => {
+        lua = l
+        l.callMain()
+    })
+}
