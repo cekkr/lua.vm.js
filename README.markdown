@@ -20,7 +20,7 @@ Clever solutions to the lack of finalisers in Javascript are being searched for.
 Building
 ========
 
-To build, run `make emscripten` in the `lua` subdirectory
+To build, run `make emscripten` in the `lua/src` subdirectory
 
 
 Usage from NodeJS
