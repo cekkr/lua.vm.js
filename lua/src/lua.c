@@ -616,7 +616,7 @@ static void doREPL (lua_State *L) {
   progname = NULL;  /* no 'progname' on errors in interactive mode */
   lua_initreadline(L);
   while ((status = loadline(L)) != -1) {
-    emscripten_sleep(1);
+    emscripten_sleep(100);
     if(doRun == 0){      
       continue;
     }

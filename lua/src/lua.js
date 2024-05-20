@@ -67,7 +67,7 @@ Module = {
     'preRun': function () {
         // Edit below or make an option to selectively wrap malloc/free.
         if (true) {
-            console.log('Wrapping malloc/free');
+            console.log('Wrapping FS_stdin_getChar');
             let FS_stdin_getChar_buffer = new ArrayBuffer(0);
             LuaJS['FS_stdin_getChar'] = FS_stdin_getChar = function () {
                 if (!FS_stdin_getChar_buffer.length) {
@@ -447,8 +447,6 @@ var __ATPOSTRUN__ = []; // functions called after the main() is called
 
 var runtimeInitialized = false;
 
-var runtimeExited = false;
-
 function preRun() {
   if (Module['preRun']) {
     if (typeof Module['preRun'] == 'function') Module['preRun'] = [Module['preRun']];
@@ -473,17 +471,6 @@ function preMain() {
   checkStackCookie();
   
   callRuntimeCallbacks(__ATMAIN__);
-}
-
-function exitRuntime() {
-  assert(!runtimeExited);
-  // ASYNCIFY cannot be used once the runtime starts shutting down.
-  Asyncify.state = Asyncify.State.Disabled;
-  checkStackCookie();
-  ___funcs_on_exit(); // Native atexit() functions
-  callRuntimeCallbacks(__ATEXIT__);
-  
-  runtimeExited = true;
 }
 
 function postRun() {
@@ -512,7 +499,6 @@ function addOnPreMain(cb) {
 }
 
 function addOnExit(cb) {
-  __ATEXIT__.unshift(cb);
 }
 
 function addOnPostRun(cb) {
@@ -690,7 +676,6 @@ var isFileURI = (filename) => filename.startsWith('file://');
 function createExportWrapper(name, nargs) {
   return (...args) => {
     assert(runtimeInitialized, `native function \`${name}\` called before runtime initialization`);
-    assert(!runtimeExited, `native function \`${name}\` called after runtime exit (use NO_EXIT_RUNTIME to keep it alive after main() exits)`);
     var f = wasmExports[name];
     assert(f, `exported native function \`${name}\` not found`);
     // Only assert for too many arguments. Too few can be valid since the missing arguments will be zero filled.
@@ -1021,7 +1006,7 @@ function dbg(...args) {
     }
   }
 
-  var noExitRuntime = Module['noExitRuntime'] || false;
+  var noExitRuntime = Module['noExitRuntime'] || true;
 
   var ptrToString = (ptr) => {
       assert(typeof ptr === 'number');
@@ -1601,9 +1586,7 @@ function dbg(...args) {
   var exitJS = (status, implicit) => {
       EXITSTATUS = status;
   
-      if (!keepRuntimeAlive()) {
-        exitRuntime();
-      }
+      checkUnflushedContent();
   
       // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
       if (keepRuntimeAlive() && !implicit) {
@@ -1618,9 +1601,6 @@ function dbg(...args) {
   
   
   var maybeExit = () => {
-      if (runtimeExited) {
-        return;
-      }
       if (!keepRuntimeAlive()) {
         try {
           _exit(EXITSTATUS);
@@ -1630,7 +1610,7 @@ function dbg(...args) {
       }
     };
   var callUserCallback = (func) => {
-      if (runtimeExited || ABORT) {
+      if (ABORT) {
         err('user callback triggered after runtime exited or application aborted.  Ignoring.');
         return;
       }
@@ -1641,20 +1621,11 @@ function dbg(...args) {
         handleException(e);
       }
     };
-  
-  var runtimeKeepalivePush = () => {
-      runtimeKeepaliveCounter += 1;
-    };
-  
-  var runtimeKeepalivePop = () => {
-      assert(runtimeKeepaliveCounter > 0);
-      runtimeKeepaliveCounter -= 1;
-    };
   /** @param {number=} timeout */
   var safeSetTimeout = (func, timeout) => {
-      runtimeKeepalivePush();
+      
       return setTimeout(() => {
-        runtimeKeepalivePop();
+        
         callUserCallback(func);
       }, timeout);
     };
@@ -2125,9 +2096,14 @@ function dbg(...args) {
       return type;
     };
   
+  var runtimeKeepalivePush = () => {
+      runtimeKeepaliveCounter += 1;
+    };
   
-  
-  
+  var runtimeKeepalivePop = () => {
+      assert(runtimeKeepaliveCounter > 0);
+      runtimeKeepaliveCounter -= 1;
+    };
   
   
   var Asyncify = {
@@ -2224,7 +2200,7 @@ function dbg(...args) {
           // the dbg() function itself can call back into WebAssembly to get the
           // current pthread_self() pointer).
           Asyncify.state = Asyncify.State.Normal;
-          runtimeKeepalivePush();
+          
           // Keep the runtime alive so that a re-wind can be done later.
           runAndAbortIfError(_asyncify_stop_unwind);
           if (typeof Fibers != 'undefined') {
@@ -2272,7 +2248,7 @@ function dbg(...args) {
         var start = Asyncify.getDataRewindFunc(ptr);
         // Once we have rewound and the stack we no longer need to artificially
         // keep the runtime alive.
-        runtimeKeepalivePop();
+        
         return start();
       },
   handleSleep(startAsync) {
@@ -2557,7 +2533,6 @@ var _fflush = createExportWrapper('fflush', 1);
 var _setTempRet0 = Module['_setTempRet0'] = createExportWrapper('setTempRet0', 1);
 var _getTempRet0 = Module['_getTempRet0'] = createExportWrapper('getTempRet0', 0);
 var _free = createExportWrapper('free', 1);
-var ___funcs_on_exit = createExportWrapper('__funcs_on_exit', 0);
 var _malloc = createExportWrapper('malloc', 1);
 var _setThrew = createExportWrapper('setThrew', 2);
 var __emscripten_tempret_set = createExportWrapper('_emscripten_tempret_set', 1);
@@ -3335,6 +3310,37 @@ function run(args = arguments_) {
   checkStackCookie();
 }
 
+function checkUnflushedContent() {
+  // Compiler settings do not allow exiting the runtime, so flushing
+  // the streams is not possible. but in ASSERTIONS mode we check
+  // if there was something to flush, and if so tell the user they
+  // should request that the runtime be exitable.
+  // Normally we would not even include flush() at all, but in ASSERTIONS
+  // builds we do so just for this check, and here we see if there is any
+  // content to flush, that is, we check if there would have been
+  // something a non-ASSERTIONS build would have not seen.
+  // How we flush the streams depends on whether we are in SYSCALLS_REQUIRE_FILESYSTEM=0
+  // mode (which has its own special function for this; otherwise, all
+  // the code is inside libc)
+  var oldOut = out;
+  var oldErr = err;
+  var has = false;
+  out = err = (x) => {
+    has = true;
+  }
+  try { // it doesn't matter if it fails
+    // In WasmFS we must also flush the WasmFS internal buffers, for this check
+    // to work.
+    _wasmfs_flush();
+  } catch(e) {}
+  out = oldOut;
+  err = oldErr;
+  if (has) {
+    warnOnce('stdio streams had content in them that was not flushed. you should set EXIT_RUNTIME to 1 (see the Emscripten FAQ), or make sure to emit a newline when you printf etc.');
+    warnOnce('(this may also be due to not including full filesystem support - try building with -sFORCE_FILESYSTEM)');
+  }
+}
+
 if (Module['preInit']) {
   if (typeof Module['preInit'] == 'function') Module['preInit'] = [Module['preInit']];
   while (Module['preInit'].length > 0) {
@@ -3348,6 +3354,64 @@ var shouldRunNow = false;
 if (Module['noInitialRun']) shouldRunNow = false;
 
 run();
+
+var workerResponded = false, workerCallbackId = -1;
+
+(function() {
+  var messageBuffer = null, buffer = 0, bufferSize = 0;
+
+  function flushMessages() {
+    if (!messageBuffer) return;
+    if (runtimeInitialized) {
+      var temp = messageBuffer;
+      messageBuffer = null;
+      temp.forEach(function(message) {
+        onmessage(message);
+      });
+    }
+  }
+
+  function messageResender() {
+    flushMessages();
+    if (messageBuffer) {
+      setTimeout(messageResender, 100); // still more to do
+    }
+  }
+
+  onmessage = (msg) => {
+    // if main has not yet been called (mem init file, other async things), buffer messages
+    if (!runtimeInitialized) {
+      if (!messageBuffer) {
+        messageBuffer = [];
+        setTimeout(messageResender, 100);
+      }
+      messageBuffer.push(msg);
+      return;
+    }
+    flushMessages();
+
+    var func = Module['_' + msg.data['funcName']];
+    if (!func) throw 'invalid worker function to call: ' + msg.data['funcName'];
+    var data = msg.data['data'];
+    if (data) {
+      if (!data.byteLength) data = new Uint8Array(data);
+      if (!buffer || bufferSize < data.length) {
+        if (buffer) _free(buffer);
+        bufferSize = data.length;
+        buffer = _malloc(data.length);
+      }
+      HEAPU8.set(data, buffer);
+    }
+
+    workerResponded = false;
+    workerCallbackId = msg.data['callbackId'];
+    if (data) {
+      func(buffer, data.length);
+    } else {
+      func(0, 0);
+    }
+  }
+})();
 
 // end include: postamble.js
 

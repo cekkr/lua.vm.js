@@ -61,7 +61,7 @@ $(LUA_A): $(BASE_O)
 	$(RANLIB) $@
 
 $(LUA_T): $(LUA_O) $(LUA_A)
-	$(CC) -o $@ $(LDFLAGS) $(LUA_O) $(LUA_A) $(LIBS) -s EXPORTED_FUNCTIONS='["_main", "_get_doRun", "_set_doRun"]'  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "callMain", "FS_stdin_getChar", "run"]' -s ASYNCIFY -s INVOKE_RUN=0 -s EXIT_RUNTIME=1 -s ASSERTIONS -s STACK_OVERFLOW_CHECK -s MODULARIZE=1 -s EXPORT_NAME="LuaJS" -sWASMFS --pre-js preJS.js
+	$(CC) -o $@ $(LDFLAGS) $(LUA_O) $(LUA_A) $(LIBS) -s EXPORTED_FUNCTIONS='["_main", "_get_doRun", "_set_doRun"]'  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "callMain", "FS_stdin_getChar", "run"]' -s ASYNCIFY -s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s ASSERTIONS -s STACK_OVERFLOW_CHECK -s MODULARIZE=1 -s EXPORT_NAME="LuaJS" -sWASMFS --pre-js preJS.js -sBUILD_AS_WORKER=1
 	# -s EXPORTED_FUNCTIONS='["_main", "_get_doRun", "_set_doRun"]'
 
 $(LUAC_T): $(LUAC_O) $(LUA_A)
