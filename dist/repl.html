@@ -25,7 +25,18 @@
     <script src="js/codemirror.js"></script>
     <link rel="stylesheet" href="css/codemirror.css">
     <script src="js/lua.js"></script>
-    
+
+    <script>
+      var LuaJS = {
+          preRun: function () {
+              function stdin() {
+                  // Return ASCII code of character, or null if no input
+                  console.log('stdin');
+              }        
+          }
+      }
+    </script>
+
     <script src="lua.js"></script>
     <script src="lua.vm.js"></script>
 

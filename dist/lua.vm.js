@@ -1,5 +1,5 @@
 var lua = null;
-var luaInput = '';
+var luaInput = ''
 
 LuaJS.call().then((l) => {
     lua = l    

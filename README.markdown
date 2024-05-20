@@ -4,8 +4,11 @@ lua.vm.js
 
 The Lua VM, on the Web
 
-Online demo: http://daurnimator.github.io/lua.vm.js/lua.vm.js.html
+Online demo: http://daurnimator.github.io/lua.vm.js/lua.vm.js.html (not still working)
 
+I'm struggled to make working in browser a simple method. In JS console of file repl.html:
+- luaInput = "print('hello')"
+- lua.callMain()
 
 Status
 ======
