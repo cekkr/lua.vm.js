@@ -71,6 +71,7 @@ test:
 
 clean:
 	$(RM) $(ALL_T) $(ALL_O)
+	$(RM) lua.wasm luac.wasm lua.js luac.js
 
 depend:
 	@$(CC) $(CFLAGS) -MM l*.c
@@ -124,8 +125,9 @@ Linux linux:	linux-noreadline
 
 emscripten:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX" SYSLIBS="-Wl,-E -ldl"
-	mv lua lua.wasm
-	$(MAKE) clean
+	mv lua lua.js
+	mv luac luac.js 
+	$(RM) $(ALL_T) $(ALL_O)
 
 linux-noreadline:
 	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX" SYSLIBS="-Wl,-E -ldl"
