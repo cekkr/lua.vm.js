@@ -6,8 +6,9 @@
 
 #define lua_c
 
-#include "lprefix.h"
+#include <emscripten.h>
 
+#include "lprefix.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -586,6 +587,24 @@ static void l_print (lua_State *L) {
   }
 }
 
+///
+/// emscripten doRun
+///
+
+int doRun = 0;
+
+EMSCRIPTEN_KEEPALIVE
+int get_doRun()
+{
+  return doRun;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void set_doRun(int value)
+{
+  doRun = value;
+}
+
 
 /*
 ** Do the REPL: repeatedly read (load) a line, evaluate (call) it, and
@@ -597,10 +616,13 @@ static void doREPL (lua_State *L) {
   progname = NULL;  /* no 'progname' on errors in interactive mode */
   lua_initreadline(L);
   while ((status = loadline(L)) != -1) {
+    if(doRun == 0)
+      emscripten_sleep(1);
+
     if (status == LUA_OK)
       status = docall(L, 0, LUA_MULTRET);
     if (status == LUA_OK) l_print(L);
-    else report(L, status);
+    else report(L, status);    
   }
   lua_settop(L, 0);  /* clear stack */
   lua_writeline();
