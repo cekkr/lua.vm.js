@@ -615,11 +615,16 @@ static void doREPL (lua_State *L) {
   const char *oldprogname = progname;
   progname = NULL;  /* no 'progname' on errors in interactive mode */
   lua_initreadline(L);
-  while ((status = loadline(L)) != -1) {
+  while (1)
+  { // (status = loadline(L)) != -1
     emscripten_sleep(100);
-    if(doRun == 0){      
+
+    if (doRun == 0)
+    {
       continue;
     }
+
+    status = loadline(L);
 
     if (status == LUA_OK)
       status = docall(L, 0, LUA_MULTRET);
@@ -670,7 +675,7 @@ static int pmain (lua_State *L) {
     if (handle_script(L, argv + script) != LUA_OK)
       return 0;  /* interrupt in case of error */
   }
-  if (args & has_i)  /* -i option? */
+  if (args & has_i || 1)  /* -i option? */
     doREPL(L);  /* do read-eval-print loop */
   else if (script < 1 && !(args & (has_e | has_v))) { /* no active option? */
     if (lua_stdin_is_tty()) {  /* running in interactive mode? */
@@ -683,11 +688,22 @@ static int pmain (lua_State *L) {
   return 1;
 }
 
+lua_State *Lmain;
 
-int main (int argc, char **argv) {
+EMSCRIPTEN_KEEPALIVE
+lua_State* run(char* code){
+  luaL_dostring(Lmain, code);
+  return Lmain;
+}
+
+int main(int argc, char **argv)
+{
   int status, result;
   lua_State *L = luaL_newstate();  /* create state */
-  if (L == NULL) {
+  Lmain = L;
+
+  if (L == NULL)
+  {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
   }
@@ -698,7 +714,7 @@ int main (int argc, char **argv) {
   status = lua_pcall(L, 2, 1, 0);  /* do the call */
   result = lua_toboolean(L, -1);  /* get result */
   report(L, status);
+
   lua_close(L);
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-

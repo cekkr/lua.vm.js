@@ -10,15 +10,19 @@ Module = {
                     let input = luaInput;
                     luaInput = '';
 
-                    if (!input)
-                        return null;
+                    if (!input) {
+                        if (true)
+                            return null;
+                        else
+                            input = '\r\n';
+                    }
 
                     FS_stdin_getChar_buffer = intArrayFromString(input, true)
                 }
 
                 let res = FS_stdin_getChar_buffer.shift();
                 return res;
-            }            
+            }                  
         }
     }
 }

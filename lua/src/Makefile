@@ -61,7 +61,7 @@ $(LUA_A): $(BASE_O)
 	$(RANLIB) $@
 
 $(LUA_T): $(LUA_O) $(LUA_A)
-	$(CC) -o $@ $(LDFLAGS) $(LUA_O) $(LUA_A) $(LIBS) -s EXPORTED_FUNCTIONS='["_main", "_get_doRun", "_set_doRun"]'  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "callMain", "FS_stdin_getChar", "run"]' -s ASYNCIFY -s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s ASSERTIONS -s STACK_OVERFLOW_CHECK -s MODULARIZE=1 -s EXPORT_NAME="LuaJS" -sWASMFS --pre-js preJS.js -sBUILD_AS_WORKER=1
+	$(CC) -o $@ $(LDFLAGS) $(LUA_O) $(LUA_A) $(LIBS) -s EXPORTED_FUNCTIONS='["_main", "_get_doRun", "_set_doRun", "_run"]'  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "callMain", "FS_stdin_getChar", "run"]' -s ASYNCIFY -s INVOKE_RUN=0 -s ASSERTIONS -s STACK_OVERFLOW_CHECK -s MODULARIZE=1 -s EXPORT_NAME="LuaJS" -sWASMFS --pre-js preJS.js -s BUILD_AS_WORKER=1
 	# -s EXPORTED_FUNCTIONS='["_main", "_get_doRun", "_set_doRun"]'
 
 $(LUAC_T): $(LUAC_O) $(LUA_A)
@@ -165,7 +165,7 @@ lcode.o:
 	$(CC) $(CFLAGS) $(CMCFLAGS) -c lcode.c
 
 lua.o:
-	$(CC) $(CFLAGS) $(CMCFLAGS) -c lua.c -s INCOMING_MODULE_JS_API='["print", "prerun", "stdin"]'
+	$(CC) $(CFLAGS) $(CMCFLAGS) -c lua.c -s INCOMING_MODULE_JS_API='["print", "prerun", "stdin"]' -s EXIT_RUNTIME=0
 
 # DO NOT DELETE
 
